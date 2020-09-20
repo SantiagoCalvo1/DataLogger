@@ -32,7 +32,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define BUFFER_SIZE				512
+#define BUFFER_SIZE				10
 #define ENVIAR_BUFFER 			'E'
 #define CONFIGURAR				'C'
 #define NADA 					'N'
@@ -61,11 +61,12 @@ uint8_t rx_dato;
 uint8_t tx_dato;
 uint8_t flag_cambio;
 uint8_t flag_actual;
-
+/*
 uint8_t enviar_buffer =	'E';
 uint8_t configurar=	'C';
 uint8_t nada= 'N';
 uint8_t adquirir= 'A';
+*/
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -149,7 +150,9 @@ int main(void)
 		{
 		case ENVIAR_BUFFER:
 			flag_actual = ENVIAR_BUFFER;
+			HAL_UART_Transmit(&huart2, &flag_actual, 1, 1);
 			// Detiene el TIM3 y por lo tento el ADC
+			HAL_ADC_Stop_IT(&hadc1);
 			HAL_TIM_Base_Stop(&htim3);
 			// Verifica si hubo error por overflow en el adc_buffer
 			if (error_buffer == 1){
@@ -170,31 +173,36 @@ int main(void)
 		case NADA:
 			flag_actual = NADA;
 			// Se frena al ADC
+			HAL_ADC_Stop_IT(&hadc1);
 			HAL_TIM_Base_Stop(&htim3);
 			break;
 
 		case ADQUIRIR:
 			flag_actual = ADQUIRIR;
-			// Comienza el ADC IT (se renueva dentro de la misma rutina)
-			HAL_ADC_Start_IT(&hadc1);
-			// Comienza el TIM3 para disparar al ADC
-			HAL_TIM_Base_Start(&htim3);
 			// Se resetea index_adc
 			adc_index = 0;
 			// Se resetea el error del buffer
 			error_buffer = 0;
+			// Comienza el ADC IT (se renueva dentro de la misma rutina)
+			HAL_ADC_Start_IT(&hadc1);
+			// Comienza el TIM3 para disparar al ADC
+			HAL_TIM_Base_Start(&htim3);
 			break;
 
 		default:
 			HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-			flag_actual = NADA;
+			flag_actual = 0;
 		}
-		HAL_UART_Transmit(&huart2, &flag_actual, 1, 1);
-		// El flag tiene que dejar de estar en INSTRUCCION_EN_ESPERA
+		// El flag tiene que dejar de estar en cambio de flag
 		flag_cambio = 0;
 		// Una vez hecho lo que habia que hacer, se activan Rx_IT
-		if (flag_actual != ENVIAR_BUFFER){
+		// Y se confirma recepcion
+		if ((flag_actual != ENVIAR_BUFFER) && (flag_actual != 0)){
+			HAL_UART_Transmit(&huart2, &flag_actual, 1, 1);
 			HAL_UART_Receive_IT(&huart2, &rx_dato, 1);
+		}
+		if (flag_actual == 0){
+			flag_actual = NADA;
 		}
 	  }
     /* USER CODE END WHILE */
@@ -414,7 +422,7 @@ static void MX_GPIO_Init(void)
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc){
 	// Toggle para visual
-	HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+	// HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 	// Se agrega un dato al buffer
 	// Pasa el valor del ADC de 12 bits a 8 bits
 	uint8_t valorADC = (HAL_ADC_GetValue(&hadc1) & 0xFF0) >> 4;
@@ -428,17 +436,20 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc){
 		adc_index = 0;
 		error_buffer = 1;
 	}
-	// Se renueva para tomar otro dato en próximo Update Event de TIM3
-	HAL_ADC_Start_IT(&hadc1);
 }
 
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
+	HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 	// Vuelve a esperar para recibir dato
 	HAL_UART_Receive_IT(&huart2, &rx_dato, 1);
+	// Resetea los contenidos del buffer
+	for (uint16_t i=0; i<BUFFER_SIZE; i++){
+		adc_buffer[i] = 0;
+	}
 	// Sale del modo enviar
 	flag_cambio = 1;
-	flag_actual = NADA;
+	flag_actual = 0;
 }
 
 

@@ -1,0 +1,24 @@
+UART{
+	UART2
+	PA2, 	PA3
+	baudrate = 115200
+	8bits
+	NO_PARITY
+}
+
+TIMER{
+	TIM3
+	Trigger = Enable
+	UpdateEvent que dispara al ADC
+	CLK = 8MHz
+	=>	Prescaler = 7999 	y	CounterPeriod = 999
+	F_TIM3 = 8MHz / [(7999+1)(999+1)}] = 1Hz == 1seg
+}
+
+ADC{
+	ADC1, IN0 = PA0
+	CLK = 4MHz
+	SamplingTime = 239.5, más tiempo mejor para estabilizar la medicion sin importar la impedancia de entrada
+	Tconv = (SamplingTime + 12.5) / CLK = 63us << 1s
+	Lo dispara el TIM3 Trigger Out cada 1s
+}

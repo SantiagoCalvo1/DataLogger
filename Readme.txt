@@ -18,7 +18,7 @@ Un paso más allá:
 10. Proveer capacidad de orientación en objetos para agregar más ADCs, como si un ADC fuera un objeto.
 
 TODO:
-Programar RTC que parpadee el led cada 2s.
+*   Programar RTC que parpadee el led cada 2s.
 Programar SleepMode con Wakeup por RTC, parpadee el led y vuelva a dormir.
 Programar ADC para trabajar con el led en el paso anterior y guardar en memoria.
 El mismo caso anterior pero guardar en FLASH (así no se borra si se corta la energía y se tiene más espacio).

@@ -45,18 +45,18 @@ byte flag = 0;
 
 // Definiciones LED
 const int LED_Pin =  13;
-const unsigned long IDLE_Periodo = 1000; // milisegundos
 
 // Definiciones ADC
 const int ADC_Pin = A0;
 const byte ADC_N_promedio = 2;  // Número de muestras para promedio
 byte ADC_Array[ARRAY_SIZE];
 unsigned int ADC_Index = 0;
-unsigned long ADC_Periodo = 2000; // milisegundos
+unsigned long ADC_Periodo = 500; // milisegundos
 
 // Definiciones TIMER
 unsigned long ADC_millis_anterior = 0;
-unsigned long IDLE_millis_anterior = 0;
+unsigned long NADA_millis_anterior = 0;
+const unsigned long NADA_Periodo = 500; // milisegundos
 
 // Definiciones SERIAL
 const long baudrate = 9600;
@@ -112,6 +112,8 @@ void loop() {
  */
 void rutina_ALMACENAR(void)
 {
+  // Apago el LED
+  digitalWrite(LED_Pin, LOW);
   // Mide el tiempo actual, si paso el tiempo de periodo se ejecuta el código
   unsigned long millis_actual = millis();
   if (millis_actual - ADC_millis_anterior >= ADC_Periodo)
@@ -165,6 +167,14 @@ void rutina_SERIAL(void)
       // Aprueba la recepción del dato y da inicio al almacenaje
       Serial.println(C_CONFIGURAR);
     }
+
+    if (dato_recibido == C_NADA)
+    {
+      // Salgo de los otros modos
+      flag = NADA;
+      // Aprueba la recepción del dato y da inicio al almacenaje
+      Serial.println(C_NADA);
+    }
     
     dato_recibido = 0;
   }
@@ -178,6 +188,8 @@ void rutina_SERIAL(void)
  */
 void rutina_ENVIAR(void)
 {
+  // Apago el LED
+  digitalWrite(LED_Pin, LOW);  
   if ((flag & DATOS_PERDIDOS) >> B_DATOS_PERDIDOS){
     // Si hubo datos perdidos lo informa
     Serial.print(C_DATOS_PERDIDOS);
@@ -205,10 +217,10 @@ void rutina_NADA(void)
 {
   // Mide el tiempo actual, si paso el tiempo de periodo se ejecuta el código
   unsigned long millis_actual = millis();
-  if (millis_actual - IDLE_millis_anterior >= IDLE_Periodo)
+  if (millis_actual - NADA_millis_anterior >= NADA_Periodo)
   {
   // Actualizar variable auxiliar
-  IDLE_millis_anterior = millis_actual;
+  NADA_millis_anterior = millis_actual;
   // Toggle al LED
   digitalWrite(LED_Pin, !digitalRead(LED_Pin));
   }
@@ -222,22 +234,32 @@ void rutina_NADA(void)
  */
 void rutina_CONFIGURAR(void)
 {
+  // Apago el LED
+  digitalWrite(LED_Pin, LOW);
+  // Reviso si hay datos por leer
   if(Serial.available() > 0){
-    dato_recibido = Serial.read();
-  }
+    dato_recibido = Serial.read();  
   
-  if (dato_recibido == 'P'){
-    // Confirma la recepción del dato
-    Serial.println('P');
-    // Cambiar el periodo seteado por el próximo dato
-    // Espera 1 seg hasta que venga el próximo dato
-    delay(1000);
-    if (Serial.available() > 0){
-      ADC_Periodo = (unsigned long) (Serial.read()); // milisegundos
+    if (dato_recibido == 'p'){
+      // Confirma la recepción del dato
+      Serial.println('p');
+      // Cambiar el periodo seteado por el próximo dato
+      // Espera 1 seg hasta que venga el próximo dato
+      delay(1000);
+      if (Serial.available() > 0){
+        ADC_Periodo = (unsigned long) (Serial.read()); // milisegundos
+      }
+      // Confirma la recepción del dato
+      Serial.println(ADC_Periodo);    
     }
-    // Confirma la recepción del dato
-    Serial.println(ADC_Periodo);    
-  }
 
+    if (dato_recibido == 'N'){
+      // Confirma la recepción del dato
+      Serial.println('N');
+      // Sale del modo configuracion y entra al de NADA
+      flag &= ~CONFIGURAR;
+      flag |= NADA;
+    }
+  }
   // Agregar otras cosas que se puedan configurar...  
 }
