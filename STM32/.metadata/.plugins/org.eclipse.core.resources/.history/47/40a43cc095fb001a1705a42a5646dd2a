@@ -234,27 +234,34 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	{
 	case ENVIAR_BUFFER:
 		flag_actual = ENVIAR_BUFFER;
+		//HAL_UART_Transmit(&huart2, &flag_actual, 1, 1);
+		delay = 200;
 		break;
 
 	case CONFIGURAR:
 		flag_actual = CONFIGURAR;
+		delay = 800;
 		break;
 
 	case NADA:
 		flag_actual = NADA;
+		delay = 1400;
 		break;
 
 	case ADQUIRIR:
 		flag_actual = ADQUIRIR;
+		delay = 2000;
 		break;
 
 	default:
+		delay = 10;
 		flag_actual = 0;
 	}
+	// El flag tiene que dejar de estar en cambio de flag
+	flag_cambio = 0;
 	// Una vez hecho lo que habia que hacer, se activan Rx_IT
 	// Y se confirma recepcion
-	uint8_t extra = &flag_actual;
-	HAL_UART_Transmit(&huart2, &flag_actual, 1, 1);
+	HAL_UART_Transmit(&huart2, &flag_actual, 1, 10);
 	HAL_UART_Receive_IT(&huart2, &rx_dato, 1);
 
 }

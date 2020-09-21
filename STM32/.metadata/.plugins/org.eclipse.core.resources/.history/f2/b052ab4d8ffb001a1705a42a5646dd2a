@@ -34,10 +34,10 @@
 /* USER CODE BEGIN PD */
 #define		DATA_SIZE		1
 #define		TIMEOUT			1
-#define		ADQUIRIR		'A'
-#define		NADA			'N'
-#define		CONFIGURAR		'C'
-#define		ENVIAR_BUFFER	'E'
+#define		ADQUIRIR		((uint8_t)'A')
+#define		NADA			((uint8_t)'N')
+#define		CONFIGURAR		((uint8_t)'C')
+#define		ENVIAR_BUFFER	((uint8_t)'E')
 #define 	BUFFER_SIZE		512
 
 /* USER CODE END PD */
@@ -100,7 +100,7 @@ int main(void)
   MX_GPIO_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-  HAL_UART_Receive_IT(&huart2, &rx_dato, 1);
+  HAL_UART_Receive_IT(&huart2, &rx_data, DATA_SIZE);
   /* USER CODE END 2 */
   delay = 10;
   flag_cambio = 0;
@@ -110,9 +110,45 @@ int main(void)
   while (1)
   {
 	  // Toggle solo para ubicar donde está
-	  //HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+	  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+	  HAL_Delay(delay);
 
+	  if (flag_cambio == 1){
+		switch (flag_actual)
+		{
+		case ENVIAR_BUFFER:
+			flag_actual = ENVIAR_BUFFER;
+			//HAL_UART_Transmit(&huart2, &flag_actual, 1, 1);
+			delay = 200;
+			break;
 
+		case CONFIGURAR:
+			flag_actual = CONFIGURAR;
+			delay = 800;
+			break;
+
+		case NADA:
+			flag_actual = NADA;
+			delay = 1400;
+			break;
+
+		case ADQUIRIR:
+			flag_actual = ADQUIRIR;
+			delay = 2000;
+			break;
+
+		default:
+			delay = 10;
+			flag_actual = 0;
+		}
+		// El flag tiene que dejar de estar en cambio de flag
+		flag_cambio = 0;
+		// Una vez hecho lo que habia que hacer, se activan Rx_IT
+		// Y se confirma recepcion
+		HAL_UART_Transmit(&huart2, &flag_actual, 1, 1);
+		HAL_UART_Receive_IT(&huart2, &rx_dato, 1);
+
+	  }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -226,40 +262,18 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
-
+	if (GPIO_Pin == PULSADOR_Pin){
+		tx_data = 'B';
+		flag_int = 1;
+	}
 }
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
-	flag_actual = rx_dato;
-	switch (flag_actual)
-	{
-	case ENVIAR_BUFFER:
-		flag_actual = ENVIAR_BUFFER;
-		break;
-
-	case CONFIGURAR:
-		flag_actual = CONFIGURAR;
-		break;
-
-	case NADA:
-		flag_actual = NADA;
-		break;
-
-	case ADQUIRIR:
-		flag_actual = ADQUIRIR;
-		break;
-
-	default:
-		flag_actual = 0;
-	}
-	// Una vez hecho lo que habia que hacer, se activan Rx_IT
-	// Y se confirma recepcion
-	uint8_t extra = &flag_actual;
-	HAL_UART_Transmit(&huart2, &flag_actual, 1, 1);
-	HAL_UART_Receive_IT(&huart2, &rx_dato, 1);
+	flag_cambio = 1;
+	flag_actual =rx_dato;
 
 }
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
-
+	HAL_UART_Receive_IT(&huart2, &rx_data, DATA_SIZE);
 }
 /* USER CODE END 4 */
 
