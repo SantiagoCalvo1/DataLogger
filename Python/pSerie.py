@@ -2,12 +2,12 @@ import serial
 import numpy as np
 
 class PSerie:
-    def __init__(self, port='COM4', baudrate=115200, timeout=10):
-        try:
-            self.puerto = serial.Serial(port=port, baudrate=baudrate, timeout=timeout)
+    def __init__(self, port='COM4', baudrate=115200, timeout=1):
+        #try:
+        self.puerto = serial.Serial(port=port, baudrate=baudrate, timeout=timeout)
             #return True
-        except Exception as e:
-            print('ERROR: pSerie -> __init__.', e, sep=' ')
+        #except Exception as e:
+        #    print('ERROR: pSerie -> __init__.', e, sep=' ')
             #return False
 
     def start_ADC(self):
@@ -34,7 +34,7 @@ class PSerie:
         """ Cierra el puerto serie """
         self.puerto.close()
 
-    def __write_ascii(self, dato, rx_array=np.zeros(0)):
+    def __write_ascii(self, dato, rx_array=np.zeros(0), rx_timestamp=np.zeros(0)):
         """ Envía el dato, si obtiene el echo se confirma la comunicación y devuelve True """
         # Verificar que sea sólo un caracter. 
         if (len(str(dato)) > 1) or (dato == ""):
@@ -64,6 +64,20 @@ class PSerie:
                         echo = True
                     except Exception as e:
                         print("Excepción: pSerie -> __write_ascii -> read_array", e, sep=" ")
+                        return False
+                # Si se quiere guardar el timestamp
+                if np.size(rx_timestamp) > 0:
+                    # Comprueba que el tamaño de array_datos y array_timestamp sea el mismo
+                    if np.size(rx_timestamp) == np.size(rx_array):
+                        print('ERROR: np.size(array_datos) != np.size(array_timestamp). Deben ser iguales.')
+                        echo = False
+                    try:
+                        for i in range(np.size(rx_timestamp)):
+                            # Se guardan como numero, en vez de letra
+                            rx_timestamp[i] = ord(self.puerto.read(size=1))#.decode('ascii')
+                        echo = True
+                    except Exception as e:
+                        print("Excepción: pSerie -> __write_ascii -> read_timestamp", e, sep=" ")
                         return False
             return echo
         except Exception as e:
